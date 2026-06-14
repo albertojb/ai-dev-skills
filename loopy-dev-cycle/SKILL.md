@@ -1,15 +1,36 @@
 ---
 name: loopy-dev-cycle
-description: On-demand, human-gated cycle for this repo. Reads GOAL.md as the drift anchor, triages issues, scans code with code-degunker, plans, asks clarifying questions, then builds one agile bucket with a degunk-and-review gate per PR. Two human gates: approve the plan, approve the merge. Logs key decisions. Never merges to main. Trigger manually.
+description: On-demand, human-gated cycle for this repo. Reads GOAL.md as the drift anchor, triages issues, scans code for quality issues (dead code, swallowed errors, style drift, etc.), plans, asks clarifying questions, then builds one agile bucket with a degunk-and-review gate per PR. Two human gates: approve the plan, approve the merge. Logs key decisions. Never merges to main. Trigger manually.
 license: MIT
 author: Alberto Jiménez Bákit (albertojb)
 ---
 
 You run this only when I invoke it. It is interactive. You will stop and wait for me twice: once after the plan, once at the PRs. Never merge to main. This cycle assumes GOAL.md, ROADMAP.md, and /specs already exist; if they do not, run seed-project-charter first.
 
-# Phase 0: Issue triage (not degunker)
+# What "degunk" means
 
-Clean the issue tracker only: close stale duplicates, fix mislabels, flag issues missing a clear definition of done. The code-degunker skill is NOT used here; it operates on code, not issues. Report what changed, then move on.
+Degunk is an inline code quality scan — no external skill required. When the instructions say to degunk, you do the following yourself:
+
+**What to flag:**
+- Dead code: unreachable branches, unused variables/exports/imports, commented-out blocks that are not explanatory
+- Swallowed errors: empty catch blocks, `_ =` discards on errors, silent ignores without a logged reason
+- Over-defensive checks: null-guards on values that can never be null at that point, redundant type narrowing, defensive fallbacks that hide bugs rather than surface them
+- Type-suppression hacks: `@ts-ignore`, `any` casts, `# type: ignore`, `eslint-disable` without a justification comment
+- Hallucinated imports: imports of modules that do not exist in the repo or package.json
+- Style drift: naming conventions, file structure, or patterns that differ from the surrounding codebase without a reason
+
+**Severity:**
+- Critical: broken or silently wrong behavior (swallowed errors that hide failures, hallucinated imports that will crash)
+- Major: significant maintenance debt or type-safety holes (broad `any` casts, large dead code blocks)
+- Minor: style drift, small over-defensive checks, cosmetic issues
+
+**Full Review Mode** (used in Phase 2a): Read the modules in scope, apply the checklist above, report findings grouped by severity.
+
+**Branch Review Mode** (used in Phase 5): Run `git diff main...HEAD`, apply the checklist to the changed lines and their immediate context only. Focus on slop the agent just introduced, not pre-existing issues.
+
+# Phase 0: Issue triage (not degunk)
+
+Clean the issue tracker only: close stale duplicates, fix mislabels, flag issues missing a clear definition of done. Degunk is NOT used here; it operates on code, not issues. Report what changed, then move on.
 
 # Phase 1: Gather (read only)
 
@@ -25,17 +46,19 @@ Sort the open issues into two groups and keep them labeled:
 
 # Phase 2: Assess and plan
 
-## 2a: Scan code with code-degunker (Full Review Mode)
-Run code-degunker in Full Review Mode against the modules tied to this run's roadmap priorities, plus any high-risk area it touches (auth, payments, data mutations). Do not full-scan the whole repo; scale to risk.
+## 2a: Degunk scan (Full Review Mode)
 
-Turn its findings into issues, with limits:
+Run a Full Review Mode degunk scan (as defined above) against the modules tied to this run's roadmap priorities, plus any high-risk area they touch (auth, payments, data mutations). Do not full-scan the whole repo; scale to risk.
+
+Turn findings into issues, with limits:
 - File only Critical and Major findings as new issues.
 - Dedupe against every open issue first.
-- Respect the 3-new-issue cap. If degunker surfaces more, file the top 3 by severity and write the rest into a "degunk backlog" note in the plan.
+- Respect the 3-new-issue cap. If the scan surfaces more, file the top 3 by severity and write the rest into a "degunk backlog" note in the plan.
 - Park all Minor smells in that backlog note, not as issues.
 
 ## 2b: Build the plan
-Plan from the NORTH STAR, roadmap priority, human-opened issues, status, and the degunker findings. For each plan item, name the issue number it maps to and the spec or acceptance criterion it satisfies. Do not plan work that has no issue and no roadmap line; file an issue for it first.
+
+Plan from the NORTH STAR, roadmap priority, human-opened issues, status, and the degunk findings. For each plan item, name the issue number it maps to and the spec or acceptance criterion it satisfies. Do not plan work that has no issue and no roadmap line; file an issue for it first.
 
 Break the plan into agile buckets: epics at the top, story-sized units underneath, each small enough to be one PR. Order the buckets. Mark which bucket this run will build.
 
@@ -66,7 +89,7 @@ For the approved bucket only:
 - Structured commits that reference the issue number.
 
 Before opening each PR, run two checks in this order:
-1. code-degunker, Branch Review Mode. Run `git diff main...HEAD` through the skill to strip the slop the agent just wrote: dead code, swallowed errors, over-defensive checks, type-suppression hacks, hallucinated imports, style drift. Match the existing codebase; do not gold-plate.
+1. Branch Review Mode degunk (as defined above). Run `git diff main...HEAD` and apply the degunk checklist to the changed lines and their immediate context: strip dead code, swallowed errors, over-defensive checks, type-suppression hacks, hallucinated imports, style drift. Match the existing codebase; do not gold-plate.
 2. Tests and linter. Never open a red PR.
 
 Then open the PR. Body lists the issue and the frozen criteria it claims to meet.
@@ -96,7 +119,7 @@ Once I have merged:
 - Never merge to main.
 - GOAL.md and frozen criteria never change without my approved diff. Specs do not change silently.
 - Roadmap, status, context, and DECISIONS.md may be updated, but roadmap changes are proposed in the plan, not made mid-build.
-- code-degunker in Assess files only Critical and Major issues, capped at 3 per run.
+- Degunk in Assess files only Critical and Major issues, capped at 3 per run.
 - Build one bucket per run. Cap at 4 PRs per run.
 - If 2 PRs in a row fail review, stop and report.
 - If a tool call fails 3 times, stop and surface it.
