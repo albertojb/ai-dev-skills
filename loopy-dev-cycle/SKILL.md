@@ -1,129 +1,92 @@
 ---
 name: loopy-dev-cycle
-description: On-demand, human-gated cycle for this repo. Reads GOAL.md as the drift anchor, triages issues, scans code for quality issues (dead code, swallowed errors, style drift, etc.), plans, asks clarifying questions, then builds one agile bucket with a degunk-and-review gate per PR. Two human gates: approve the plan, approve the merge. Logs key decisions. Never merges to main. Trigger manually.
+description: On-demand, human-gated dev cycle for this repo. Reads GOAL.md as the drift anchor, picks the single most impactful open issue, plans a full work manifest, then builds it as one PR in an uninterrupted, crash-resumable run — git commits are the checkpoints. Two human gates only: approve the plan, approve the merge. Never merges to main. Trigger manually; re-invoking resumes an interrupted run.
 license: MIT
 author: Alberto Jiménez Bákit (albertojb)
 ---
 
-You run this only when I invoke it. It is interactive. You will stop and wait for me twice: once after the plan, once at the PRs. Never merge to main. This cycle assumes GOAL.md, ROADMAP.md, and /specs already exist; if they do not, run seed-project-charter first.
+You run this only when I invoke it. There are exactly two human gates: approve the plan, approve the merge. Between them you never stop, never ask "shall I continue?", and never invent your own batches, segments, or checkpoints. Never merge to main. This cycle assumes GOAL.md, ROADMAP.md, and /specs already exist; if they do not, run seed-project-charter first.
 
-# What "degunk" means
+# Resume check (before anything else)
 
-Degunk is an inline code quality scan — no external skill required. When the instructions say to degunk, you do the following yourself:
-
-**What to flag:**
-- Dead code: unreachable branches, unused variables/exports/imports, commented-out blocks that are not explanatory
-- Swallowed errors: empty catch blocks, `_ =` discards on errors, silent ignores without a logged reason
-- Over-defensive checks: null-guards on values that can never be null at that point, redundant type narrowing, defensive fallbacks that hide bugs rather than surface them
-- Type-suppression hacks: `@ts-ignore`, `any` casts, `# type: ignore`, `eslint-disable` without a justification comment
-- Hallucinated imports: imports of modules that do not exist in the repo or package.json
-- Style drift: naming conventions, file structure, or patterns that differ from the surrounding codebase without a reason
-
-**Severity:**
-- Critical: broken or silently wrong behavior (swallowed errors that hide failures, hallucinated imports that will crash)
-- Major: significant maintenance debt or type-safety holes (broad `any` casts, large dead code blocks)
-- Minor: style drift, small over-defensive checks, cosmetic issues
-
-**Full Review Mode** (used in Phase 2a): Read the modules in scope, apply the checklist above, report findings grouped by severity.
-
-**Branch Review Mode** (used in Phase 5): Run `git diff main...HEAD`, apply the checklist to the changed lines and their immediate context only. Focus on slop the agent just introduced, not pre-existing issues.
-
-# Phase 0: Issue triage (not degunk)
-
-Clean the issue tracker only: close stale duplicates, fix mislabels, flag issues missing a clear definition of done. Degunk is NOT used here; it operates on code, not issues. Report what changed, then move on.
+If a run branch with a MANIFEST.md containing unticked items exists, this invocation is a resume, not a new run:
+- Re-read the manifest and the frozen criteria in it verbatim. They still govern. Do not reinterpret or renegotiate them.
+- `git log` the branch to confirm what actually landed, then continue from the first unticked item.
+- Do not redo completed items. Do not re-open the plan gate.
 
 # Phase 1: Gather (read only)
 
-Read all of these before planning. Do not modify anything yet.
-- GOAL.md. Read this first. The NORTH STAR line (the core decision the project drives) is the top drift anchor for this whole run, above the roadmap and above the specs.
-- CONTEXT.md, ROADMAP.md, STATUS.md
-- /specs (acceptance criteria)
-- All open issues: `gh issue list --state open`
+Read all of these before planning. Do not modify code yet.
+- GOAL.md first. The NORTH STAR line (the core decision the project drives) is the top drift anchor for the whole run, above the roadmap and above the specs.
+- CONTEXT.md, ROADMAP.md, STATUS.md, /specs (acceptance criteria).
+- All open issues: `gh issue list --state open`. While reading, do light hygiene as a side effect: close obvious stale duplicates on sight; note anything mislabeled or missing a definition of done as one line in the plan. No separate triage phase, no triage report.
 
-Sort the open issues into two groups and keep them labeled:
-1. Human-opened issues. First-class work. Default them above agent-generated items unless the roadmap says otherwise.
-2. Agent-opened issues from prior runs.
+# Phase 2: Plan
 
-# Phase 2: Assess and plan
+**Pick ONE issue** — the one that most advances the NORTH STAR and the current roadmap priority. Never pick by ease. If the most important issue is hard, that is the issue. Human-opened issues outrank agent-opened ones unless the roadmap says otherwise. If the top issue cannot fit one reviewable PR, take its largest coherent slice; do not drop down to an easier issue.
 
-## 2a: Degunk scan (Full Review Mode)
+**Write the full, honest work manifest** for that issue:
+- Every file to change, every test to write, every step — as a checklist. State the real total up front, however long it is. Do not hide scope to look fast, and do not pad it to look thorough.
+- The acceptance criteria (from the issue and /specs) the PR must prove.
 
-Run a Full Review Mode degunk scan (as defined above) against the modules tied to this run's roadmap priorities, plus any high-risk area they touch (auth, payments, data mutations). Do not full-scan the whole repo; scale to risk.
-
-Turn findings into issues, with limits:
-- File only Critical and Major findings as new issues.
-- Dedupe against every open issue first.
-- Respect the 3-new-issue cap. If the scan surfaces more, file the top 3 by severity and write the rest into a "degunk backlog" note in the plan.
-- Park all Minor smells in that backlog note, not as issues.
-
-## 2b: Build the plan
-
-Plan from the NORTH STAR, roadmap priority, human-opened issues, status, and the degunk findings. For each plan item, name the issue number it maps to and the spec or acceptance criterion it satisfies. Do not plan work that has no issue and no roadmap line; file an issue for it first.
-
-Break the plan into agile buckets: epics at the top, story-sized units underneath, each small enough to be one PR. Order the buckets. Mark which bucket this run will build.
-
-# Phase 3: Drift check and clarify, then STOP
-
-Drift check first:
+**Drift check:**
 - Restate the NORTH STAR from GOAL.md, verbatim.
-- State in one line how the chosen bucket serves it.
-- Flag any plan item that does not clearly serve it. If a flagged item still belongs, say why; otherwise cut it.
+- State in one line how the chosen issue serves it.
+- Flag any manifest item that does not clearly serve it. If a flagged item still belongs, say why; otherwise cut it.
 
-Then clarify:
+**Clarify:**
 - Ask me only the questions that block good work. Cap at 5. Each states why the answer changes the plan.
 - Do not ask for things GOAL.md, the context, or the specs already answer.
 
-Stop here. Wait for my answers. Do not write code.
+STOP. Wait for my approval. Do not write code.
 
-# Phase 4: Adjust and freeze (after my answers)
+# Phase 3: Freeze (after my answers)
 
-- Revise the plan and buckets from my answers.
+- Revise the manifest from my answers.
 - If the work needs a GOAL.md, roadmap, or spec change, propose it as a diff and wait for my approval. Never change GOAL.md or specs silently.
-- Freeze the acceptance criteria for this run's bucket. They do not move for the rest of the run.
-- Note the key decisions this bucket commits to; you will log them in Phase 7.
+- Create the branch. Commit MANIFEST.md to it: the checklist plus the frozen acceptance criteria. The criteria do not move for the rest of the run.
+- Note the key decisions this run commits to; you will log them in Phase 7.
 
-# Phase 5: Build
+# Phase 4: Build (uninterrupted)
 
-For the approved bucket only:
-- One branch and one PR per story. Small, reviewable diffs.
+- Work the manifest top to bottom. After each completed item: tick it in MANIFEST.md, commit, push. The commit is the checkpoint — a crash or limit costs at most one item, never the run.
 - Structured commits that reference the issue number.
+- At roughly the halfway point, post a one-line progress note ("9 of 18 done") without stopping or waiting for a reply.
+- Stopping mid-build is a rule violation unless you are genuinely blocked: broken environment, contradictory frozen criteria, something only I can resolve. If blocked, say exactly what is blocking — not "shall I continue?".
 
-Before opening each PR, run two checks in this order:
-1. Branch Review Mode degunk (as defined above). Run `git diff main...HEAD` and apply the degunk checklist to the changed lines and their immediate context: strip dead code, swallowed errors, over-defensive checks, type-suppression hacks, hallucinated imports, style drift. Match the existing codebase; do not gold-plate.
-2. Tests and linter. Never open a red PR.
+# Phase 5: Review and PR
 
-Then open the PR. Body lists the issue and the frozen criteria it claims to meet.
+Before opening the PR, two checks in order:
+1. **Degunk the diff.** Run `git diff main...HEAD` and clean the changed lines and their immediate context only: dead code, swallowed errors, over-defensive checks, type-suppression hacks (`@ts-ignore`, `any` casts, `# type: ignore`, `eslint-disable` without a justification comment), hallucinated imports, style drift. Match the existing codebase; do not gold-plate. Focus on slop this run introduced, not pre-existing issues.
+2. **Full test suite and linter**, run by you. Never open a red PR.
 
-Then run an independent reviewer in a separate context. The degunk step above was maker-side and does not count as review.
-- The reviewer sees only the PR diff and the frozen criteria, not your build reasoning or the degunk log.
-- It runs the tests and linter itself. It does not trust your claim.
-- It outputs PASS or FAIL per criterion with the proof.
-- On FAIL: push a fix or close the PR with a reason. No failing PR left open and silent.
+Then the last manifest item: remove MANIFEST.md, commit, and open the PR. The body lists the issue, the frozen criteria, and the completed manifest.
+
+Then run an independent reviewer in a separate context. Your degunk above was maker-side and does not count as review.
+- The reviewer sees only the PR diff and the frozen criteria — not your build reasoning, not the degunk log.
+- It verifies each criterion against the diff and runs only the tests that prove that criterion. It does not re-run the full suite; that was your pre-PR gate. It does not trust your claims — PASS or FAIL per criterion, with the proof.
+- On FAIL: push a fix or close the PR with a reason. If the reviewer fails the PR twice, stop and report. No failing PR left open and silent.
 
 # Phase 6: STOP for merge
 
-Do not merge. Leave the passing PRs open for my review. Merge is mine, enforced by branch protection on main.
+Do not merge. Leave the passing PR open for my review. Merge is mine, enforced by branch protection on main.
 
 # Phase 7: Document and hand off (after I merge)
 
-Once I have merged:
-- Update STATUS.md with what landed.
-- Update CONTEXT.md with anything future runs need.
-- Update ROADMAP.md to reflect progress, and propose the next bucket.
-- Append to DECISIONS.md: one line per key decision from this bucket, in the form "decision - why - which GOAL line it serves." This is how we keep intent auditable.
-- Carry the degunk backlog note forward so Minor smells are not lost.
-- Write a short "next run starts here" note at the top of STATUS.md.
+- STATUS.md: a short entry — what landed, the issue number — with a "next run starts here" line at the top. Always.
+- DECISIONS.md: one line per key decision from this run, in the form "decision — why — which GOAL line it serves." Always. This is how we keep intent auditable.
+- ROADMAP.md: only if a roadmap line completed or changed. Propose the next run's target.
+- CONTEXT.md: only if the run discovered a durable constraint future runs need. This is the exception, not a routine update.
 
 # Guardrails
 
 - Never merge to main.
-- GOAL.md and frozen criteria never change without my approved diff. Specs do not change silently.
-- Roadmap, status, context, and DECISIONS.md may be updated, but roadmap changes are proposed in the plan, not made mid-build.
-- Degunk in Assess files only Critical and Major issues, capped at 3 per run.
-- Build one bucket per run. Cap at 4 PRs per run.
-- If 2 PRs in a row fail review, stop and report.
+- GOAL.md, specs, and frozen criteria change only through a diff I approve.
+- One issue, one PR per run. Split into more PRs only when a single diff would be genuinely unreviewable — and say so in the plan, not mid-build.
+- No self-imposed pauses between the two gates.
+- If the independent reviewer fails the PR twice, stop and report.
 - If a tool call fails 3 times, stop and surface it.
 
 # Trigger
 
-Manual only. I invoke this. It does not run on a schedule and does not self-restart.
+Manual only. I invoke this. It does not run on a schedule and does not self-restart. Re-invoking after an interruption resumes the run (see Resume check).

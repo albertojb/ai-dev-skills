@@ -5,9 +5,9 @@ Two composable agent skills for running a disciplined, human-gated build loop on
 ## What they do
 
 - **seed-project-charter** (run once): interviews you to lock the actual goal and the core decision the project drives, then writes `GOAL.md` and seeds `ROADMAP.md` and `/specs`.
-- **loopy-dev-cycle** (run per bucket): reads `GOAL.md` as the drift anchor, triages issues, scans code with `code-degunker`, plans, checkpoints with you, builds one agile bucket per run, logs key decisions, and never merges to main without your approval.
+- **loopy-dev-cycle** (run per issue): reads `GOAL.md` as the drift anchor, picks the single most impactful open issue (never the easiest), plans a full work manifest, checkpoints with you once, then builds it as one PR in an uninterrupted, crash-resumable run — git commits are the checkpoints, and re-invoking resumes where it stopped. Independent review gate before the PR is handed to you. Never merges to main.
 
-Run `seed-project-charter` once at the start of a project. Then run `loopy-dev-cycle` once per bucket, on your trigger.
+Run `seed-project-charter` once at the start of a project. Then run `loopy-dev-cycle` once per issue, on your trigger.
 
 ## Why one format works everywhere
 
@@ -30,7 +30,7 @@ The two skills here (`seed-project-charter`, `loopy-dev-cycle`) are released und
 
 ## Credits
 
-`loopy-dev-cycle` calls `code-degunker`, a third-party code-review skill from Zo Computer Skills (https://www.zo.computer/skills/code-degunker). It is referenced, not bundled, and keeps its own license. Install it separately on the same surface, or remove the degunker steps in Phase 2a and Phase 5 if you do not have it.
+The inline "degunk the diff" checklist in `loopy-dev-cycle` was adapted from `code-degunker`, a code-review skill from Zo Computer Skills (https://www.zo.computer/skills/code-degunker). It is now self-contained; no separate install needed.
 
 ## Notes
 
