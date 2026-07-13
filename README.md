@@ -5,9 +5,9 @@ Two composable agent skills for running a disciplined, human-gated build loop on
 ## What they do
 
 - **seed-project-charter** (run once): interviews you to lock the actual goal and the core decision the project drives, then writes `GOAL.md` and seeds `ROADMAP.md` and `/specs`.
-- **loopy-dev-cycle** (run per issue): reads `GOAL.md` as the drift anchor, picks the single most impactful open issue (never the easiest), plans a full work manifest, checkpoints with you once, then builds it as one PR in an uninterrupted, crash-resumable run — git commits are the checkpoints, and re-invoking resumes where it stopped. Independent review gate before the PR is handed to you. Never merges to main.
+- **loopy-dev-cycle** (run per batch): reads `GOAL.md` as the drift anchor, scopes the run to all open issues plus anything new you name, groups the work into coherent chunks (one PR each, ordered by dependency and impact — never by ease), warns you if the total is too much, checkpoints with you once, then builds every chunk in an uninterrupted, crash-resumable run — git commits are the checkpoints, a run-manifest issue is the live state, and re-invoking resumes where it stopped. Independent review gate per PR; a twice-failing PR is parked, not fatal. Never merges to main.
 
-Run `seed-project-charter` once at the start of a project. Then run `loopy-dev-cycle` once per issue, on your trigger.
+Run `seed-project-charter` once at the start of a project. Then run `loopy-dev-cycle` whenever the backlog warrants a run, on your trigger.
 
 ## Why one format works everywhere
 
