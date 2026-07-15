@@ -1,6 +1,6 @@
 ---
 name: seed-project-charter
-description: One-time kickoff. Interview me to define the actual goal and the core decision this project drives, then write GOAL.md and seed ROADMAP.md and /specs. Run once at project start, before loopy-dev-cycle. Do not write code.
+description: One-time kickoff. Interview me to define the actual goal and the core decision this project drives, write GOAL.md and seed ROADMAP.md and /specs, and set up the git branch model loopy relies on (a dev integration branch as the repo default, with master kept as release only). Run once at project start, before loopy-dev-cycle. Do not write application code.
 license: MIT
 author: Alberto Jiménez Bákit (albertojb)
 ---
@@ -62,6 +62,23 @@ In all cases, artifacts contain:
 - ROADMAP.md: an ordered set of epics that each serve the goal. Mark it draft. On existing repos, reflect what is already complete.
 - /specs: acceptance criteria for the first unfinished epic only. Leave later epics unspecced until their turn.
 
+# Step 4: Set up the branch model (after artifacts, if a git remote exists)
+
+Loopy depends on a specific two-branch layout. Set it up once here so every later run inherits it. Skip only if there is no git repo or no remote yet; if so, tell me to create the GitHub repo, then re-run this step.
+
+The model, stated plainly so it lands in the repo's own docs:
+- **`dev` is the default branch and the integration branch.** All loopy work branches off `dev` and merges back into `dev`. New clones and PRs default to `dev`.
+- **`master` (or `main`) is production, and release only.** Loopy never touches it. It advances only through an explicit, human-requested, twice-confirmed release from `dev`.
+
+Do this:
+1. Detect the production branch name: `master` or `main`, whichever the repo already uses. Do not rename it.
+2. Create `dev` from it if it does not exist, and push it: `git checkout <prod> && git pull && git checkout -b dev && git push -u origin dev`. If `dev` already exists, leave it.
+3. Make `dev` the repo default branch: `gh repo edit --default-branch dev`. This is the directive: after this, everything points at `dev` and `master` is release-only.
+4. Best effort, protect the production branch so nothing merges into it by accident: `gh api -X PUT repos/{owner}/{repo}/branches/<prod>/protection ...` requiring a PR before merge. If this fails (needs admin rights or a paid plan), do not block. Print one line telling me to enable branch protection on `<prod>` manually in GitHub settings and continue.
+5. Record the branch model in a short section of README.md (or CONTEXT.md if README is not the right home): dev is default and where work happens, master is release-only, and loopy opens one PR per run into dev.
+
+Report what you set: the production branch name, that `dev` exists and is now the default, and whether branch protection was applied or needs a manual step from me.
+
 # Handoff
 
-GOAL.md is read-only to the build cycle. It changes only through a diff I approve. From here, run loopy-dev-cycle to execute one bucket at a time. Every drift check in that cycle measures against the NORTH STAR line in GOAL.md, not against the specs.
+GOAL.md is read-only to the build cycle. It changes only through a diff I approve. The branch model is now: `dev` is the default and integration branch, `master` is release-only. From here, run loopy-dev-cycle to execute one run at a time; each run cuts one branch off `dev` and opens one PR into `dev`. Every drift check in that cycle measures against the NORTH STAR line in GOAL.md, not against the specs.
